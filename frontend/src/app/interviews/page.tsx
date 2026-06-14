@@ -1,138 +1,187 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { useLocalStorage } from "@/lib/use-local-storage"
+import { useState } from "react"
 import { Icons } from "@/components/icons"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 import { PageTransition } from "@/components/motion"
+import type { InterviewQuestion } from "@/types"
 
-const questions = [
-  "请介绍一下你最有挑战性的项目及你如何解决其中的技术难题",
-  "描述一次你与团队成员产生分歧的经历，你是如何处理的",
-  "你如何看待前端工程化？你在项目中做过哪些实践",
-  "请解释一下你对 RESTful API 设计的理解",
-  "你如何保证代码质量和可维护性",
-  "请做一个简短的自我介绍",
-  "你为什么想来我们公司？",
-  "你认为自己最大的优点和缺点是什么",
-  "描述一次你主动学习和掌握新技术的过程",
-  "你对未来 3-5 年的职业规划是什么",
-  "你期望的薪资范围是多少？",
-  "你目前有其他公司的 Offer 吗？",
-  "你最快什么时候可以入职？",
-  "你有什么问题想问我们吗？",
-]
+type Stage = "setup" | "answering" | "review"
 
-export default function InterviewsPage() {
+export default function InterviewPage() {
+  const [stage, setStage] = useState<Stage>("setup")
   const [company, setCompany] = useState("")
   const [position, setPosition] = useState("")
-  const [generated, setGenerated] = useState(false)
-  const [items, setItems] = useState<{ id: string; text: string; answer: string; feedback: string }[]>([])
-  const [profile] = useLocalStorage("profile", null as null | { fullName: string })
+  const [generating, setGenerating] = useState(false)
+  const [questions, setQuestions] = useState<InterviewQuestion[]>([])
+  const [currentQ, setCurrentQ] = useState(0)
+  const [answers, setAnswers] = useState<string[]>([])
+  const [scores, setScores] = useState<Array<{ score: number; feedback: string }>>([])
+  const [overallScore, setOverallScore] = useState(0)
 
-  const handleGenerate = () => {
-    if (!company.trim() || !position.trim()) return
-    const picked = [...questions].sort(() => Math.random() - 0.5).slice(0, 4)
-    setItems(picked.map((text) => ({ id: Date.now().toString() + Math.random(), text, answer: "", feedback: "" })))
-    setGenerated(true)
+  const handleGenerate = async () => {
+    if (!company || !position) return
+    setGenerating(true)
+    await new Promise((r) => setTimeout(r, 1000))
+    setQuestions([
+      { index: 0, question: "请简单介绍一下你自己，以及为什么你对这个岗位感兴趣？", category: "行为面试", difficulty: "简单" },
+      { index: 1, question: "请描述一个你在团队中解决过的技术难题。", category: "行为面试", difficulty: "中等" },
+      { index: 2, question: "对于你使用的编程语言，它的垃圾回收机制是如何工作的？", category: "技术面试", difficulty: "中等" },
+      { index: 3, question: "请解释 RESTful API 的设计原则，并举例说明。", category: "技术面试", difficulty: "中等" },
+      { index: 4, question: "如果让你重新设计你最近完成的一个项目，你会做哪些不同的选择？", category: "行为面试", difficulty: "较难" },
+    ])
+    setAnswers(new Array(5).fill(""))
+    setScores([])
+    setCurrentQ(0)
+    setGenerating(false)
+    setStage("answering")
   }
 
-  const evaluate = (id: string) => {
-    setItems(items.map((q) => {
-      if (q.id !== id) return q
-      const len = q.answer.length
-      return { ...q, feedback: len < 10 ? "回答偏简短，建议结合具体项目展开，使用 STAR 原则组织。" : len < 50 ? "回答基本完整，建议增加具体数据或成果来增强说服力。" : "回答很清晰，有具体案例支撑，继续保持。" }
-    }))
-  }
+  const handleSubmitAnswer = () => {
+    const length = answers[currentQ].length
+    const score = Math.min(30 + length * 0.3, 95)
+    const feedback = score > 70 ? "回答完整，表达清晰。" : "回答较为简略，建议补充更多细节。"
+    setScores((prev) => {
+      const next = [...prev]
+      next[currentQ] = { score: Math.round(score), feedback }
+      return next
+    })
 
-  const score = useMemo(() => {
-    if (!items.length) return 0
-    return Math.round(items.reduce((s, q) => {
-      const len = q.answer.length
-      return s + (len > 100 ? 90 : len > 50 ? 70 : len > 10 ? 50 : 20)
-    }, 0) / items.length)
-  }, [items])
+    if (currentQ < questions.length - 1) {
+      setCurrentQ((c) => c + 1)
+    } else {
+      const total = scores.reduce((sum, s) => sum + s.score, 0) + Math.round(score)
+      setOverallScore(Math.round(total / questions.length))
+      setStage("review")
+    }
+  }
 
   return (
     <PageTransition className="max-w-3xl mx-auto px-8 py-10">
       <div className="mb-8">
-        <h1 className="text-xl font-semibold text-gray-900">AI 面试准备</h1>
-        <p className="text-sm text-gray-400 mt-1">生成模拟面试题并获取反馈</p>
+        <h1 className="text-xl font-semibold text-card-foreground">面试准备</h1>
+        <p className="text-sm text-muted-foreground mt-1">AI 模拟面试 · 实时评分 · 复盘报告</p>
       </div>
 
-      <Card className="mb-5">
-        <CardContent className="p-5">
-          <h2 className="text-xs font-semibold text-muted-foreground tracking-wide mb-4">开始练习</h2>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div><Label>目标公司</Label><Input className="mt-1" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="例如：腾讯" /></div>
-            <div><Label>目标岗位</Label><Input className="mt-1" value={position} onChange={(e) => setPosition(e.target.value)} placeholder="例如：前端工程师" /></div>
-          </div>
-          <Button onClick={handleGenerate} disabled={!company || !position} className="w-full"><Icons.Target className="w-4 h-4" /> 生成题目</Button>
-        </CardContent>
-      </Card>
-
-      {generated && (
-        <Card className="mb-5 animate-slide-up">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xs font-semibold text-muted-foreground tracking-wide">{company} · {position}</h2>
-              {profile?.fullName && <span className="text-xs text-muted-foreground">{profile.fullName}</span>}
-            </div>
-
-            {score > 0 && (
-              <div className="mb-6 p-5 bg-muted rounded-xl text-center">
-                <p className="text-xs text-muted-foreground mb-1">综合评分</p>
-                <p className={`text-3xl font-semibold ${score >= 80 ? "text-emerald-600" : score >= 60 ? "text-blue-600" : "text-amber-600"}`}>{score}</p>
-                <p className="text-xs text-muted-foreground mt-1">{score >= 80 ? "表现优秀" : score >= 60 ? "表现良好" : "建议多练习"}</p>
-                <div className="mt-3 w-full bg-muted rounded-full h-1 overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-700 ${score >= 80 ? "bg-emerald-500" : score >= 60 ? "bg-blue-500" : "bg-amber-500"}`} style={{ width: `${score}%` }} />
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-4">
-              {items.map((q, i) => (
-                <div key={q.id} className="border border-border rounded-xl p-4">
-                  <p className="text-sm text-card-foreground mb-3">
-                    <span className="font-medium text-muted-foreground mr-2">{i + 1}.</span>
-                    {q.text}
-                  </p>
-                  <textarea className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-none mb-3" rows={3} placeholder="输入你的回答..." value={q.answer}
-                    onChange={(e) => setItems(items.map((x) => x.id === q.id ? { ...x, answer: e.target.value } : x))}
-                  />
-                  <div className="flex items-center justify-between">
-                    <Button variant="ghost" size="sm" onClick={() => evaluate(q.id)} disabled={!q.answer.trim()}>获取反馈</Button>
-                    <span className="text-xs text-muted-foreground">{q.answer.length} 字</span>
-                  </div>
-                  {q.feedback && (
-                    <div className="mt-3 p-3.5 bg-muted rounded-xl text-xs text-muted-foreground leading-relaxed border border-border">
-                      <span className="font-medium text-card-foreground">反馈：</span> {q.feedback}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+      {stage === "setup" && (
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <Label>目标公司</Label>
+            <Input placeholder="如：字节跳动" value={company} onChange={(e) => setCompany(e.target.value)} />
+            <Label>目标岗位</Label>
+            <Input placeholder="如：前端开发工程师" value={position} onChange={(e) => setPosition(e.target.value)} />
+            <Button onClick={handleGenerate} disabled={generating || !company || !position} className="w-full">
+              {generating ? (
+                <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> 生成中...</>
+              ) : (
+                <><Icons.Interviews className="w-4 h-4" /> 开始模拟面试</>
+              )}
+            </Button>
           </CardContent>
         </Card>
       )}
 
-      {!generated && (
-        <Card>
-          <CardContent className="p-5">
-            <h2 className="text-xs font-semibold text-muted-foreground tracking-wide mb-3">使用说明</h2>
-            <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
-              <li>输入目标公司和岗位</li>
-              <li>AI 生成相关面试题目</li>
-              <li>输入你的回答并获取 AI 反馈</li>
-              <li>根据反馈持续改进</li>
-            </ol>
-          </CardContent>
-        </Card>
+      {stage === "answering" && questions.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">问题 {currentQ + 1} / {questions.length}</span>
+            <div className="flex gap-1">
+              {questions.map((_, i) => (
+                <div key={i} className={`w-8 h-1 rounded-full ${i < currentQ ? "bg-emerald-400" : i === currentQ ? "bg-primary" : "bg-border"}`} />
+              ))}
+            </div>
+          </div>
+
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-[11px]">{questions[currentQ].category}</Badge>
+                <Badge variant="outline" className="text-[11px]">{questions[currentQ].difficulty}</Badge>
+              </div>
+              <p className="text-sm text-card-foreground leading-relaxed">{questions[currentQ].question}</p>
+              <textarea
+                className="w-full min-h-[120px] rounded-lg border border-input bg-transparent px-3 py-2 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-none"
+                placeholder="输入你的回答..."
+                rows={5}
+                value={answers[currentQ]}
+                onChange={(e) => {
+                  const next = [...answers]
+                  next[currentQ] = e.target.value
+                  setAnswers(next)
+                }}
+              />
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-muted-foreground">{answers[currentQ].length} 字</span>
+                <div className="flex gap-2">
+                  {currentQ > 0 && (
+                    <Button variant="outline" size="sm" onClick={() => setCurrentQ((c) => c - 1)}>上一题</Button>
+                  )}
+                  <Button size="sm" onClick={handleSubmitAnswer} disabled={!answers[currentQ].trim()}>
+                    {currentQ < questions.length - 1 ? "下一题" : "完成评测"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {scores.length > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs font-semibold text-muted-foreground tracking-wide mb-2">已评题目</p>
+                <div className="space-y-1.5">
+                  {scores.map((s, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs">
+                      <span className="text-card-foreground">Q{i + 1}</span>
+                      <span className={s.score >= 70 ? "text-emerald-500" : "text-amber-500"}>{s.score}分</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {stage === "review" && overallScore > 0 && (
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="p-6 text-center">
+              <p className="text-xs text-muted-foreground mb-2">综合评分</p>
+              <p className={`text-4xl font-semibold ${overallScore >= 80 ? "text-emerald-500" : overallScore >= 60 ? "text-blue-500" : "text-amber-500"}`}>{overallScore}</p>
+              <p className="text-xs text-muted-foreground mt-1">{overallScore >= 80 ? "表现优秀" : overallScore >= 60 ? "表现良好" : "建议多加练习"}</p>
+            </CardContent>
+          </Card>
+
+          {scores.map((s, i) => (
+            <Card key={i}>
+              <CardContent className="p-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <span className="text-xs font-semibold text-card-foreground">Q{i + 1}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-card-foreground mb-1">{questions[i]?.question}</p>
+                    <p className="text-[11px] text-muted-foreground mb-2 line-clamp-2">{answers[i]}</p>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-semibold ${s.score >= 70 ? "text-emerald-500" : "text-amber-500"}`}>{s.score}</span>
+                      <span className="text-[11px] text-muted-foreground">{s.feedback}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => { setStage("setup"); setQuestions([]); setScores([]) }}>重新开始</Button>
+            <Button className="flex-1" onClick={() => window.print()}>导出报告</Button>
+          </div>
+        </div>
       )}
     </PageTransition>
   )
 }
-

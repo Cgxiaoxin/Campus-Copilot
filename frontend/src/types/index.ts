@@ -65,3 +65,53 @@ export interface Task {
   completed: boolean
   applicationId?: string
 }
+
+export interface Resume {
+  id: string
+  userId: string
+  title: string
+  template: string
+  jd?: string
+  content?: {
+    personalInfo: { name: string; email: string; phone: string }
+    summary: string
+    skills: string[]
+    education: Array<{ school: string; degree: string; major: string; startDate: string; endDate: string }>
+    experience: Array<{ company: string; position: string; description: string; startDate: string; endDate: string }>
+    projects: Array<{ name: string; role: string; description: string; techStack: string[] }>
+  }
+  version: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface InterviewQuestion {
+  index: number
+  question: string
+  category: string
+  difficulty: string
+}
+
+export interface InterviewScore {
+  questionIndex: number
+  score: number
+  feedback: string
+}
+
+export interface InterviewSession {
+  id: string
+  userId: string
+  company: string
+  position: string
+  questions: InterviewQuestion[]
+  answers: Array<{ questionIndex: number; answer: string }> | null
+  scores: InterviewScore[] | null
+  overallScore: number | null
+  report: {
+    summary: string
+    strengths: string[]
+    suggestions: string[]
+    dimensions: Record<string, number>
+  } | null
+  createdAt: string
+}
