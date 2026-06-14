@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Icons } from "@/components/icons"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 const navItems = [
   { href: "/", label: "工作台", icon: Icons.Dashboard },
@@ -18,13 +19,13 @@ export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="w-56 min-h-screen bg-white border-r border-gray-100 flex flex-col shrink-0">
+    <aside className="w-56 min-h-screen bg-sidebar border-r border-sidebar-border flex flex-col shrink-0">
       <div className="px-5 pt-6 pb-4">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gray-900 flex items-center justify-center">
-            <span className="text-[10px] font-bold text-white tracking-tight">C</span>
+          <div className="w-7 h-7 rounded-lg bg-sidebar-primary flex items-center justify-center">
+            <span className="text-[10px] font-bold text-sidebar-primary-foreground tracking-tight">C</span>
           </div>
-          <span className="text-sm font-semibold text-gray-900 tracking-tight">Campus</span>
+          <span className="text-sm font-semibold text-sidebar-foreground tracking-tight">Campus</span>
         </Link>
       </div>
 
@@ -38,22 +39,26 @@ export function Sidebar() {
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150",
                 isActive
-                  ? "bg-gray-100 text-gray-900 font-medium"
-                  : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
               )}
             >
-              <item.icon className={cn("w-4 h-4", isActive ? "text-gray-900" : "text-gray-400")} />
+              <item.icon className={cn("w-4 h-4", isActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/40")} />
               {item.label}
             </Link>
           )
         })}
       </nav>
 
-      <div className="px-3 pb-4 mt-2">
-        <div className="border-t border-gray-100 pt-4">
-          <div className="px-3 py-3 rounded-lg bg-gray-50">
-            <p className="text-xs font-medium text-gray-900">校招加油</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">坚持就是胜利</p>
+      <div className="px-3 pb-4 mt-2 space-y-2">
+        <div className="flex items-center justify-between px-3">
+          <span className="text-xs text-sidebar-foreground/40">主题</span>
+          <ThemeToggle />
+        </div>
+        <div className="border-t border-sidebar-border pt-4">
+          <div className="px-3 py-3 rounded-lg bg-sidebar-accent/50">
+            <p className="text-xs font-medium text-sidebar-foreground">校招加油</p>
+            <p className="text-[11px] text-sidebar-foreground/40 mt-0.5">坚持就是胜利</p>
           </div>
         </div>
       </div>

@@ -3,6 +3,11 @@
 import { useState, useMemo } from "react"
 import { useLocalStorage } from "@/lib/use-local-storage"
 import { Icons } from "@/components/icons"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { PageTransition } from "@/components/motion"
 
 const questions = [
   "请介绍一下你最有挑战性的项目及你如何解决其中的技术难题",
@@ -52,77 +57,82 @@ export default function InterviewsPage() {
   }, [items])
 
   return (
-    <div className="max-w-3xl mx-auto px-8 py-10 animate-fade-in">
+    <PageTransition className="max-w-3xl mx-auto px-8 py-10">
       <div className="mb-8">
         <h1 className="text-xl font-semibold text-gray-900">AI 面试准备</h1>
         <p className="text-sm text-gray-400 mt-1">生成模拟面试题并获取反馈</p>
       </div>
 
-      <section className="card p-5 mb-5">
-        <h2 className="text-xs font-semibold text-gray-500 tracking-wide mb-4">开始练习</h2>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div><label className="label">目标公司</label><input className="input" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="例如：腾讯" /></div>
-          <div><label className="label">目标岗位</label><input className="input" value={position} onChange={(e) => setPosition(e.target.value)} placeholder="例如：前端工程师" /></div>
-        </div>
-        <button onClick={handleGenerate} disabled={!company || !position} className="btn-primary w-full"><Icons.Target className="w-4 h-4" /> 生成题目</button>
-      </section>
+      <Card className="mb-5">
+        <CardContent className="p-5">
+          <h2 className="text-xs font-semibold text-muted-foreground tracking-wide mb-4">开始练习</h2>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div><Label>目标公司</Label><Input className="mt-1" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="例如：腾讯" /></div>
+            <div><Label>目标岗位</Label><Input className="mt-1" value={position} onChange={(e) => setPosition(e.target.value)} placeholder="例如：前端工程师" /></div>
+          </div>
+          <Button onClick={handleGenerate} disabled={!company || !position} className="w-full"><Icons.Target className="w-4 h-4" /> 生成题目</Button>
+        </CardContent>
+      </Card>
 
       {generated && (
-        <section className="card p-5 mb-5 animate-slide-up">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xs font-semibold text-gray-500 tracking-wide">{company} · {position}</h2>
-            {profile?.fullName && <span className="text-xs text-gray-400">{profile.fullName}</span>}
-          </div>
-
-          {score > 0 && (
-            <div className="mb-6 p-5 bg-gray-50 rounded-xl text-center">
-              <p className="text-xs text-gray-400 mb-1">综合评分</p>
-              <p className={`text-3xl font-semibold ${score >= 80 ? "text-emerald-600" : score >= 60 ? "text-blue-600" : "text-amber-600"}`}>{score}</p>
-              <p className="text-xs text-gray-400 mt-1">{score >= 80 ? "表现优秀" : score >= 60 ? "表现良好" : "建议多练习"}</p>
-              <div className="mt-3 w-full bg-gray-200 rounded-full h-1 overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-700 ${score >= 80 ? "bg-emerald-500" : score >= 60 ? "bg-blue-500" : "bg-amber-500"}`} style={{ width: `${score}%` }} />
-              </div>
+        <Card className="mb-5 animate-slide-up">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xs font-semibold text-muted-foreground tracking-wide">{company} · {position}</h2>
+              {profile?.fullName && <span className="text-xs text-muted-foreground">{profile.fullName}</span>}
             </div>
-          )}
 
-          <div className="space-y-4">
-            {items.map((q, i) => (
-              <div key={q.id} className="border border-gray-100 rounded-xl p-4">
-                <p className="text-sm text-gray-900 mb-3">
-                  <span className="font-medium text-gray-400 mr-2">{i + 1}.</span>
-                  {q.text}
-                </p>
-                <textarea className="input resize-none mb-3" rows={3} placeholder="输入你的回答..." value={q.answer}
-                  onChange={(e) => setItems(items.map((x) => x.id === q.id ? { ...x, answer: e.target.value } : x))}
-                />
-                <div className="flex items-center justify-between">
-                  <button onClick={() => evaluate(q.id)} disabled={!q.answer.trim()}
-                    className="text-xs text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium"
-                  >获取反馈</button>
-                  <span className="text-xs text-gray-400">{q.answer.length} 字</span>
+            {score > 0 && (
+              <div className="mb-6 p-5 bg-muted rounded-xl text-center">
+                <p className="text-xs text-muted-foreground mb-1">综合评分</p>
+                <p className={`text-3xl font-semibold ${score >= 80 ? "text-emerald-600" : score >= 60 ? "text-blue-600" : "text-amber-600"}`}>{score}</p>
+                <p className="text-xs text-muted-foreground mt-1">{score >= 80 ? "表现优秀" : score >= 60 ? "表现良好" : "建议多练习"}</p>
+                <div className="mt-3 w-full bg-muted rounded-full h-1 overflow-hidden">
+                  <div className={`h-full rounded-full transition-all duration-700 ${score >= 80 ? "bg-emerald-500" : score >= 60 ? "bg-blue-500" : "bg-amber-500"}`} style={{ width: `${score}%` }} />
                 </div>
-                {q.feedback && (
-                  <div className="mt-3 p-3.5 bg-gray-50 rounded-xl text-xs text-gray-500 leading-relaxed border border-gray-100">
-                    <span className="font-medium text-gray-700">反馈：</span> {q.feedback}
-                  </div>
-                )}
               </div>
-            ))}
-          </div>
-        </section>
+            )}
+
+            <div className="space-y-4">
+              {items.map((q, i) => (
+                <div key={q.id} className="border border-border rounded-xl p-4">
+                  <p className="text-sm text-card-foreground mb-3">
+                    <span className="font-medium text-muted-foreground mr-2">{i + 1}.</span>
+                    {q.text}
+                  </p>
+                  <textarea className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-none mb-3" rows={3} placeholder="输入你的回答..." value={q.answer}
+                    onChange={(e) => setItems(items.map((x) => x.id === q.id ? { ...x, answer: e.target.value } : x))}
+                  />
+                  <div className="flex items-center justify-between">
+                    <Button variant="ghost" size="sm" onClick={() => evaluate(q.id)} disabled={!q.answer.trim()}>获取反馈</Button>
+                    <span className="text-xs text-muted-foreground">{q.answer.length} 字</span>
+                  </div>
+                  {q.feedback && (
+                    <div className="mt-3 p-3.5 bg-muted rounded-xl text-xs text-muted-foreground leading-relaxed border border-border">
+                      <span className="font-medium text-card-foreground">反馈：</span> {q.feedback}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {!generated && (
-        <section className="card p-5">
-          <h2 className="text-xs font-semibold text-gray-500 tracking-wide mb-3">使用说明</h2>
-          <ol className="text-xs text-gray-400 space-y-1.5 list-decimal list-inside">
-            <li>输入目标公司和岗位</li>
-            <li>AI 生成相关面试题目</li>
-            <li>输入你的回答并获取 AI 反馈</li>
-            <li>根据反馈持续改进</li>
-          </ol>
-        </section>
+        <Card>
+          <CardContent className="p-5">
+            <h2 className="text-xs font-semibold text-muted-foreground tracking-wide mb-3">使用说明</h2>
+            <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
+              <li>输入目标公司和岗位</li>
+              <li>AI 生成相关面试题目</li>
+              <li>输入你的回答并获取 AI 反馈</li>
+              <li>根据反馈持续改进</li>
+            </ol>
+          </CardContent>
+        </Card>
       )}
-    </div>
+    </PageTransition>
   )
 }
+
