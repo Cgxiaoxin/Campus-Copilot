@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Icons } from "@/components/icons"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useAuth } from "@/components/auth-dialog"
 
 const navItems = [
   { href: "/", label: "工作台", icon: Icons.Dashboard },
@@ -55,13 +56,22 @@ export function Sidebar() {
           <span className="text-xs text-sidebar-foreground/40">主题</span>
           <ThemeToggle />
         </div>
-        <div className="border-t border-sidebar-border pt-4">
-          <div className="px-3 py-3 rounded-lg bg-sidebar-accent/50">
-            <p className="text-xs font-medium text-sidebar-foreground">校招加油</p>
-            <p className="text-[11px] text-sidebar-foreground/40 mt-0.5">坚持就是胜利</p>
-          </div>
-        </div>
+        <SidebarAuth />
       </div>
     </aside>
+  )
+}
+
+function SidebarAuth() {
+  const { token, setOpen } = useAuth()
+  return (
+    <div className="border-t border-sidebar-border pt-4">
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full px-3 py-2 rounded-lg text-xs text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all text-left"
+      >
+        {token ? "已连接后端" : "连接后端 →"}
+      </button>
+    </div>
   )
 }

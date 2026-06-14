@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useMemo, useCallback } from "react"
+import { api } from "@/lib/api"
+import { useAuth } from "@/components/auth-dialog"
 import { Icons } from "@/components/icons"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -41,18 +43,34 @@ export default function ResumePage() {
     return Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([w]) => w)
   }, [jd])
 
+  const { token } = useAuth()
   const handleGenerate = useCallback(async () => {
     if (!jd.trim()) return
     setGenerating(true)
-    await new Promise((r) => setTimeout(r, 1200))
-    setContent((prev) => ({
-      ...prev,
-      summary: `${prev.summary}（已针对 JD 优化：${jd.slice(0, 80)}...）`,
-      skills: [...new Set([...prev.skills, ...keywords.slice(0, 5)])],
-    }))
-    setGenerating(false)
-    setGenerated(true)
-  }, [jd, keywords])
+    try {
+      if (token) {
+        const res = await api.generateResume({ jd, template: selectedTemplate })
+        if (res.content) setContent(res.content)
+      } else {
+        await new Promise((r) => setTimeout(r, 1200))
+        setContent((prev) => ({
+          ...prev,
+          summary: `${prev.summary}（已针对 JD 优化：${jd.slice(0, 80)}...）`,
+          skills: [...new Set([...prev.skills, ...keywords.slice(0, 5)])],
+        }))
+      }
+      setGenerated(true)
+    } catch {
+      setContent((prev) => ({
+        ...prev,
+        summary: `${prev.summary}（已针对 JD 优化：${jd.slice(0, 80)}...）`,
+        skills: [...new Set([...prev.skills, ...keywords.slice(0, 5)])],
+      }))
+      setGenerated(true)
+    } finally {
+      setGenerating(false)
+    }
+  }, [jd, keywords, token, selectedTemplate])
 
   const TemplateComponent = TEMPLATE_MAP[selectedTemplate] || TemplateModern
 

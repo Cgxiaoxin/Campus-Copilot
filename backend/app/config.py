@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
+    # LLM
+    LLM_PROVIDER: str = "mock"  # mock | openai | qwen | deepseek
+    LLM_API_KEY: str = ""
+    LLM_BASE_URL: str = "https://api.openai.com/v1"
+    LLM_MODEL: str = "gpt-4o-mini"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

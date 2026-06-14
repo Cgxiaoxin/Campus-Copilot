@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { api } from "@/lib/api"
+import { useAuth } from "@/components/auth-dialog"
 import { Icons } from "@/components/icons"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,6 +14,14 @@ import type { InterviewQuestion } from "@/types"
 
 type Stage = "setup" | "answering" | "review"
 
+const FALLBACK_QUESTIONS: InterviewQuestion[] = [
+  { index: 0, question: "请简单介绍一下你自己，以及为什么你对这个岗位感兴趣？", category: "行为面试", difficulty: "简单" },
+  { index: 1, question: "请描述一个你在团队中解决过的技术难题。", category: "行为面试", difficulty: "中等" },
+  { index: 2, question: "对于你使用的编程语言，它的垃圾回收机制是如何工作的？", category: "技术面试", difficulty: "中等" },
+  { index: 3, question: "请解释 RESTful API 的设计原则，并举例说明。", category: "技术面试", difficulty: "中等" },
+  { index: 4, question: "如果让你重新设计你最近完成的一个项目，你会做哪些不同的选择？", category: "行为面试", difficulty: "较难" },
+]
+
 export default function InterviewPage() {
   const [stage, setStage] = useState<Stage>("setup")
   const [company, setCompany] = useState("")
@@ -22,26 +32,67 @@ export default function InterviewPage() {
   const [answers, setAnswers] = useState<string[]>([])
   const [scores, setScores] = useState<Array<{ score: number; feedback: string }>>([])
   const [overallScore, setOverallScore] = useState(0)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const { token } = useAuth()
 
   const handleGenerate = async () => {
     if (!company || !position) return
     setGenerating(true)
-    await new Promise((r) => setTimeout(r, 1000))
-    setQuestions([
-      { index: 0, question: "请简单介绍一下你自己，以及为什么你对这个岗位感兴趣？", category: "行为面试", difficulty: "简单" },
-      { index: 1, question: "请描述一个你在团队中解决过的技术难题。", category: "行为面试", difficulty: "中等" },
-      { index: 2, question: "对于你使用的编程语言，它的垃圾回收机制是如何工作的？", category: "技术面试", difficulty: "中等" },
-      { index: 3, question: "请解释 RESTful API 的设计原则，并举例说明。", category: "技术面试", difficulty: "中等" },
-      { index: 4, question: "如果让你重新设计你最近完成的一个项目，你会做哪些不同的选择？", category: "行为面试", difficulty: "较难" },
-    ])
-    setAnswers(new Array(5).fill(""))
-    setScores([])
-    setCurrentQ(0)
-    setGenerating(false)
-    setStage("answering")
+    try {
+      if (token) {
+        const session = await api.generateInterview({ company, position })
+        setQuestions(session.questions)
+        setSessionId(session.id)
+      } else {
+        await new Promise((r) => setTimeout(r, 1000))
+        setQuestions([
+          { index: 0, question: "请简单介绍一下你自己，以及为什么你对这个岗位感兴趣？", category: "行为面试", difficulty: "简单" },
+          { index: 1, question: "请描述一个你在团队中解决过的技术难题。", category: "行为面试", difficulty: "中等" },
+          { index: 2, question: "对于你使用的编程语言，它的垃圾回收机制是如何工作的？", category: "技术面试", difficulty: "中等" },
+          { index: 3, question: "请解释 RESTful API 的设计原则，并举例说明。", category: "技术面试", difficulty: "中等" },
+          { index: 4, question: "如果让你重新设计你最近完成的一个项目，你会做哪些不同的选择？", category: "行为面试", difficulty: "较难" },
+        ])
+      }
+      setAnswers(new Array(5).fill(""))
+      setScores([])
+      setCurrentQ(0)
+      setGenerating(false)
+      setStage("answering")
+    } catch {
+      await new Promise((r) => setTimeout(r, 1000))
+      setQuestions(FALLBACK_QUESTIONS)
+      setAnswers(new Array(5).fill(""))
+      setScores([])
+      setCurrentQ(0)
+      setGenerating(false)
+      setStage("answering")
+    }
   }
 
-  const handleSubmitAnswer = () => {
+  const handleSubmitAnswer = async () => {
+    setScores((prev) => {
+      const next = [...prev]
+      next[currentQ] = { score: 0, feedback: "评估中..." }
+      return next
+    })
+
+    if (currentQ < questions.length - 1) {
+      setCurrentQ((c) => c + 1)
+      return
+    }
+
+    if (token && sessionId) {
+      try {
+        const session = await api.submitInterview(sessionId, answers.map((a, i) => ({ questionIndex: i, answer: a })))
+        if (session.scores && session.overallScore) {
+          setScores(session.scores.map((s: { score: number; feedback: string }) => ({ score: s.score, feedback: s.feedback })))
+          setOverallScore(session.overallScore)
+          setStage("review")
+          return
+        }
+      } catch { /* fall through */ }
+    }
+
     const length = answers[currentQ].length
     const score = Math.min(30 + length * 0.3, 95)
     const feedback = score > 70 ? "回答完整，表达清晰。" : "回答较为简略，建议补充更多细节。"
@@ -50,14 +101,9 @@ export default function InterviewPage() {
       next[currentQ] = { score: Math.round(score), feedback }
       return next
     })
-
-    if (currentQ < questions.length - 1) {
-      setCurrentQ((c) => c + 1)
-    } else {
-      const total = scores.reduce((sum, s) => sum + s.score, 0) + Math.round(score)
-      setOverallScore(Math.round(total / questions.length))
-      setStage("review")
-    }
+    const total = scores.reduce((sum, s) => sum + s.score, 0) + Math.round(score)
+    setOverallScore(Math.round(total / questions.length))
+    setStage("review")
   }
 
   return (
